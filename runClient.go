@@ -1,10 +1,7 @@
 package main
 
-import (
-	"chatserver/client"
-	"fmt"
-)
+import "github.com/tbtonner/gochatserver/client"
 
 func main() {
-	fmt.Println(client.ClientHello())
+	client.Run()
 }
