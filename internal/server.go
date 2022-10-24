@@ -7,16 +7,48 @@ import (
 	"sync"
 )
 
-// goroutine to read from port
-func handleCon(con net.Conn) {
-	defer con.Close()
+type client struct {
+	con      net.Conn
+	username string
+	msgChan  chan string
+}
+
+var (
+	clients []client
+)
+
+const (
+	PORT     string = ":8080"
+	PROTOCOL string = "tcp"
+)
+
+func handleSendMsg(cli client) {
 	for {
-		data, err := bufio.NewReader(con).ReadString('\n')
+		msg := <-cli.msgChan
+		for i := 0; i < len(clients); i++ {
+			if clients[i].con != cli.con {
+				_, err := clients[i].con.Write([]byte(msg + "\n"))
+				if err != nil {
+					fmt.Println(err)
+					return
+				}
+			}
+		}
+	}
+}
+
+// goroutine to read from port
+func handleCon(cli client) {
+	defer cli.con.Close()
+	for {
+		data, err := bufio.NewReader(cli.con).ReadString('\n')
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
-		fmt.Println(data)
+		fmt.Println("Server received:" + data)
+
+		cli.msgChan <- data
 	}
 }
 
@@ -26,7 +58,7 @@ func RunServer() {
 	wg := sync.WaitGroup{}
 
 	// set up listener on port
-	ln, err := net.Listen("tcp", ":8080")
+	ln, err := net.Listen(PROTOCOL, PORT)
 	defer ln.Close()
 
 	if err != nil {
@@ -42,11 +74,24 @@ func RunServer() {
 			return
 		}
 
+		var newClient client
+		newClient.con = con
+		newClient.username = "testOther"
+		newClient.msgChan = make(chan string, 1)
+
+		clients = append(clients, newClient)
+
 		// start go routine for monitoring the socket
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			handleCon(con)
+			handleCon(newClient)
+		}()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			handleSendMsg(newClient)
 		}()
 
 		i++

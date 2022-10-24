@@ -12,13 +12,15 @@ import (
 // goroutine to read from port
 func monitorSocket(con net.Conn) {
 	for {
-		status, err := bufio.NewReader(con).ReadString('\n')
+		msg, err := bufio.NewReader(con).ReadString('\n')
 		if err != nil {
 			fmt.Println("Unable to read input from the server:", err.Error())
 			os.Exit(1) // TODO: handle instead of exiting
 		}
-		status = strings.Trim(status, "\r\n")
-		fmt.Println(status)
+		msg = strings.Trim(msg, "\r\n")
+
+		fmt.Printf("\033[2K\rother: %s\n", msg)
+		fmt.Print("> ")
 	}
 }
 
@@ -46,7 +48,7 @@ func sendToSocket(con net.Conn) {
 func RunClient() {
 	wg := sync.WaitGroup{}
 
-	con, err := net.Dial("tcp", ":8080")
+	con, err := net.Dial(PROTOCOL, PORT)
 	if err != nil {
 		fmt.Println(err)
 		return
