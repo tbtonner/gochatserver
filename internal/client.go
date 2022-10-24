@@ -1,4 +1,4 @@
-package client
+package internal
 
 import (
 	"bufio"
@@ -40,11 +40,14 @@ func sendToSocket(con net.Conn) {
 			fmt.Println(e)
 		}
 	}
+}
 
+func hello(s string) (string, error) {
+	return "Hello " + s, nil
 }
 
 // main for client (to be called from runClient)
-func Run() {
+func RunClient() {
 	wg := sync.WaitGroup{}
 
 	con, err := net.Dial("tcp", ":8080")
