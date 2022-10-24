@@ -42,10 +42,6 @@ func sendToSocket(con net.Conn) {
 	}
 }
 
-func hello(s string) (string, error) {
-	return "Hello " + s, nil
-}
-
 // main for client (to be called from runClient)
 func RunClient() {
 	wg := sync.WaitGroup{}
