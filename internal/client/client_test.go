@@ -1,4 +1,4 @@
-package internal
+package client
 
 // func TestHelloName(t *testing.T) {
 // 	name := "Gladys"
