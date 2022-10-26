@@ -1,74 +1,59 @@
 package server
 
 import (
-	"bufio"
 	"fmt"
+	"io"
 	"net"
 	"strings"
 	"sync"
 )
+
+type rooms struct {
+	rms []room
+	mu  sync.Mutex
+}
+
+func (rooms *rooms) addRoomToRooms(room room) {
+	rooms.mu.Lock()
+	defer rooms.mu.Unlock()
+
+	rooms.rms = append(rooms.rms, room)
+}
 
 const (
 	PORT     string = ":8080"
 	PROTOCOL string = "tcp"
 )
 
+// func to format string input before sending to clients
 func FormatStringInput(s string) string {
 	return strings.Trim(s, "\r\n")
 }
 
-func writeToCon(con net.Conn, msg string) error {
-	_, err := con.Write([]byte(msg + "\n"))
+// func to send a given msg to a client
+func writeToCon(writer io.Writer, msg string) error {
+	_, err := writer.Write([]byte(msg + "\n"))
 	return err
 }
 
-// goroutine to monitor the msgChan channel and send to clients
-func monitorMsgChan(cli *client) {
-	for {
-		msg := <-cli.msgChan // await change in msgChan
-		roomToSend := cli.currentRoom
-
-		for i := 0; i < len(roomToSend.clients); i++ {
-			if roomToSend.clients[i].con != cli.con {
-				err := writeToCon(roomToSend.clients[i].con, msg)
-				if err != nil {
-					fmt.Println(err)
-					return
-				}
-			}
-		}
-	}
-}
-
-// goroutine to read from port
-func handleCon(cli *client) {
-	defer cli.con.Close()
-	for {
-		msg, err := bufio.NewReader(cli.con).ReadString('\n')
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		fmt.Printf("Server received: %q from user: %q in room: %q\n", msg, cli.username, cli.currentRoom.name)
-
-		cli.msgChan <- cli.username + ": " + msg
-	}
-}
-
-func getUsername(cli *client) (string, error) {
-	fmt.Println("waiting for usernme...")
-	input, err := bufio.NewReader(cli.con).ReadString('\n')
-	if err != nil {
-		return "", err
-	}
-	username := FormatStringInput(input)
-	fmt.Println("username for client set to " + username)
-	return username, nil
-}
-
-func newCall(ln net.Listener) {
+// main for server (to be called from runServer)
+func RunServer() {
 	wg := sync.WaitGroup{}
+	defer wg.Wait()
+
 	defaultRoom := newDefaultRoom()
+	rooms := rooms{}
+	rooms.addRoomToRooms(*defaultRoom)
+
+	// set up listener on port
+	ln, err := net.Listen(PROTOCOL, PORT)
+	defer ln.Close()
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println("Connected to port: " + PORT + " via: " + PROTOCOL)
 
 	// loop to accept new net.dials (from clients)
 	for {
@@ -81,68 +66,31 @@ func newCall(ln net.Listener) {
 
 		// create new client instance and add to the clients slice (set to default room)
 		newClient := newClient(
+			con.RemoteAddr().String(),
+			con,
 			con,
 			"annoymous",
 			make(chan string, 1),
 			defaultRoom,
 		)
 		defaultRoom.addCliToRoom(newClient)
+		fmt.Printf("client: %q connected\n", newClient.uid)
 
-		username, err := getUsername(newClient)
-		if err != nil {
-			fmt.Println(err)
-		}
-		newClient.setUsername(username)
-		writeToCon(
-			newClient.con,
-			fmt.Sprintf("Welcome %q to the %q channel", newClient.username, newClient.currentRoom.name),
-		)
-		newClient.msgChan <- username + " has entered the chat"
+		// // for now only allow two clients to join -> close connection if 3rd one joins
+		// if len(defaultRoom.clients) == 3 {
+		// 	fmt.Println("Too many clients - closing connection...")
+		// 	con.Close()
+		// 	fmt.Println("Connection closed")
+		// 	break
+		// }
 
-		// start go routine for monitoring the socket
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			handleCon(newClient)
+			defer con.Close()
+			newClient.newClientSetup(&rooms)
 		}()
-
-		// start goroutine for monitoring the message channel for new client
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			monitorMsgChan(newClient)
-		}()
-
-		// for now only allow two clients to join -> close connection if 3rd one joins
-		if len(defaultRoom.clients) == 3 {
-			fmt.Println("Too many clients - closing connection...")
-			con.Close()
-			fmt.Println("Connection closed")
-		}
 	}
-}
 
-// main for server (to be called from runServer)
-func RunServer() {
-	wgMain := sync.WaitGroup{}
-	// rooms := []room{defaultRoom} // TODO: need for later! -> make concurrent
-
-	// set up listener on port
-	ln, err := net.Listen(PROTOCOL, PORT)
-	defer ln.Close()
-
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	fmt.Println("Connected to port: " + PORT + " via: " + PROTOCOL)
-
-	wgMain.Add(1)
-	go func() {
-		defer wgMain.Done()
-		newCall(ln)
-	}()
-
-	wgMain.Wait()
 	fmt.Println("closing server...")
 }

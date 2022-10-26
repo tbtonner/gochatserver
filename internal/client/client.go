@@ -10,10 +10,14 @@ import (
 	"github.com/tbtonner/gochatserver/internal/server"
 )
 
-// TODO: make useful if only one line
+const (
+	ME = "Me:"
+)
+
+// func to print incoming messsage from server - w/ remove current line (>)
 func printMsg(msg string) {
 	// print msg (remove current line and replace)
-	fmt.Printf("\033[2K\r%s\n> ", server.FormatStringInput(msg))
+	fmt.Printf("\033[2K\r%s\n%s ", server.FormatStringInput(msg), ME)
 }
 
 // goroutine to read from port
@@ -47,18 +51,13 @@ func rep(con net.Conn, prefix string, scanner bufio.Scanner) error {
 }
 
 // goroutine to send message to port
-func sendToSocket(con net.Conn) {
-	scanner := bufio.NewScanner(os.Stdin)
-	err := rep(con, "Please enter your username:", *scanner)
-	if err != nil {
-		fmt.Println(err)
-	}
-
+func sendToSocket(con net.Conn, scanner *bufio.Scanner) {
 	// repl start
 	for {
-		err = rep(con, ">", *scanner)
+		err := rep(con, ME, *scanner)
 		if err != nil {
 			fmt.Println(err)
+			return
 		}
 	}
 }
@@ -74,6 +73,12 @@ func RunClient() {
 	}
 	fmt.Println("Connected to server")
 
+	scanner := bufio.NewScanner(os.Stdin)
+	err = rep(con, "Please enter your username:", *scanner)
+	if err != nil {
+		fmt.Println(err)
+	}
+
 	// start go routine for monitoring the socket
 	wg.Add(1)
 	go func() {
@@ -85,7 +90,7 @@ func RunClient() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		sendToSocket(con)
+		sendToSocket(con, scanner)
 	}()
 
 	wg.Wait()
