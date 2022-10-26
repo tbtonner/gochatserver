@@ -26,7 +26,7 @@ func monitorSocket(con net.Conn) {
 		msg, err := bufio.NewReader(con).ReadString('\n')
 		if err != nil {
 			fmt.Println("Unable to read input from the server:", err.Error())
-			os.Exit(1) // TODO: handle instead of exiting
+			os.Exit(1)
 		}
 		printMsg(msg)
 	}

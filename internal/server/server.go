@@ -8,18 +8,6 @@ import (
 	"sync"
 )
 
-type rooms struct {
-	rms []room
-	mu  sync.Mutex
-}
-
-func (rooms *rooms) addRoomToRooms(room room) {
-	rooms.mu.Lock()
-	defer rooms.mu.Unlock()
-
-	rooms.rms = append(rooms.rms, room)
-}
-
 const (
 	PORT     string = ":8080"
 	PROTOCOL string = "tcp"
@@ -43,7 +31,7 @@ func RunServer() {
 
 	defaultRoom := newDefaultRoom()
 	rooms := rooms{}
-	rooms.addRoomToRooms(*defaultRoom)
+	rooms.addRoom(*defaultRoom)
 
 	// set up listener on port
 	ln, err := net.Listen(PROTOCOL, PORT)
@@ -61,7 +49,7 @@ func RunServer() {
 		con, err := ln.Accept()
 		if err != nil {
 			fmt.Println(err)
-			return
+			break
 		}
 
 		// create new client instance and add to the clients slice (set to default room)
@@ -76,19 +64,13 @@ func RunServer() {
 		defaultRoom.addCliToRoom(newClient)
 		fmt.Printf("client: %q connected\n", newClient.uid)
 
-		// // for now only allow two clients to join -> close connection if 3rd one joins
-		// if len(defaultRoom.clients) == 3 {
-		// 	fmt.Println("Too many clients - closing connection...")
-		// 	con.Close()
-		// 	fmt.Println("Connection closed")
-		// 	break
-		// }
-
+		// go routine for this client (monitor and set username, write etc.)
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
 			defer con.Close()
 			newClient.newClientSetup(&rooms)
+			fmt.Printf("closing connection: %q\n", newClient.uid)
 		}()
 	}
 

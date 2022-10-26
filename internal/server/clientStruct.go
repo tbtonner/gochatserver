@@ -8,7 +8,6 @@ import (
 )
 
 type client struct {
-	// con         net.Conn
 	uid         string
 	reader      io.Reader
 	writer      io.Writer
@@ -43,7 +42,11 @@ func (cli *client) getUsername() (string, error) {
 // goroutine to monitor the msgChan channel and send to clients
 func (cli *client) monitorMsgChan() {
 	for {
-		msg := <-cli.msgChan // await change in msgChan
+		msg, ok := <-cli.msgChan // await change in msgChan
+		if !ok {
+			fmt.Printf("msgChan not OK for %q\n", cli.uid)
+			return
+		}
 
 		// send msg to everone in room except the client who sent it
 		for _, client := range cli.currentRoom.clients {
@@ -63,7 +66,9 @@ func (cli *client) handleCon() {
 	for {
 		msg, err := bufio.NewReader(cli.reader).ReadString('\n')
 		if err != nil {
-			fmt.Println(err)
+			fmt.Printf("Server lost connection to client: %q\n", cli.uid)
+			cli.currentRoom.removeCli(*cli)
+			close(cli.msgChan)
 			return
 		}
 		fmt.Printf("Server received: %q from user: %q in room: %q\n", msg, cli.username, cli.currentRoom.name)
