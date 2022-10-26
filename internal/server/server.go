@@ -17,6 +17,11 @@ func FormatStringInput(s string) string {
 	return strings.Trim(s, "\r\n")
 }
 
+func writeToCon(con net.Conn, msg string) error {
+	_, err := con.Write([]byte(msg + "\n"))
+	return err
+}
+
 // goroutine to monitor the msgChan channel and send to clients
 func monitorMsgChan(cli *client) {
 	for {
@@ -25,7 +30,7 @@ func monitorMsgChan(cli *client) {
 
 		for i := 0; i < len(roomToSend.clients); i++ {
 			if roomToSend.clients[i].con != cli.con {
-				_, err := roomToSend.clients[i].con.Write([]byte(msg + "\n"))
+				err := writeToCon(roomToSend.clients[i].con, msg)
 				if err != nil {
 					fmt.Println(err)
 					return
@@ -88,6 +93,10 @@ func newCall(ln net.Listener) {
 			fmt.Println(err)
 		}
 		newClient.setUsername(username)
+		writeToCon(
+			newClient.con,
+			fmt.Sprintf("Welcome %q to the %q channel", newClient.username, newClient.currentRoom.name),
+		)
 		newClient.msgChan <- username + " has entered the chat"
 
 		// start go routine for monitoring the socket

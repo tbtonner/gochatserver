@@ -53,7 +53,6 @@ func sendToSocket(con net.Conn) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println("Welcome to the 'main' chatroom!")
 
 	// repl start
 	for {
