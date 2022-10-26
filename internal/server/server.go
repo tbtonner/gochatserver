@@ -21,11 +21,11 @@ func FormatStringInput(s string) string {
 func monitorMsgChan(cli *client) {
 	for {
 		msg := <-cli.msgChan // await change in msgChan
-
 		roomToSend := cli.currentRoom
+
 		for i := 0; i < len(roomToSend.clients); i++ {
 			if roomToSend.clients[i].con != cli.con {
-				_, err := roomToSend.clients[i].con.Write([]byte(cli.username + ": " + msg + "\n"))
+				_, err := roomToSend.clients[i].con.Write([]byte(msg + "\n"))
 				if err != nil {
 					fmt.Println(err)
 					return
@@ -44,9 +44,9 @@ func handleCon(cli *client) {
 			fmt.Println(err)
 			return
 		}
-		fmt.Println("Server received:" + msg)
+		fmt.Printf("Server received: %q from user: %q in room: %q\n", msg, cli.username, cli.currentRoom.name)
 
-		cli.msgChan <- msg
+		cli.msgChan <- cli.username + ": " + msg
 	}
 }
 
@@ -61,21 +61,9 @@ func getUsername(cli *client) (string, error) {
 	return username, nil
 }
 
-// main for server (to be called from runServer)
-func RunServer() {
+func newCall(ln net.Listener) {
 	wg := sync.WaitGroup{}
 	defaultRoom := newDefaultRoom()
-	// rooms := []room{defaultRoom} // TODO: need for later! -> make concurrent
-
-	// set up listener on port
-	ln, err := net.Listen(PROTOCOL, PORT)
-	defer ln.Close()
-
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	fmt.Println("Connected to port: " + PORT + " via: " + PROTOCOL)
 
 	// loop to accept new net.dials (from clients)
 	for {
@@ -100,6 +88,7 @@ func RunServer() {
 			fmt.Println(err)
 		}
 		newClient.setUsername(username)
+		newClient.msgChan <- username + " has entered the chat"
 
 		// start go routine for monitoring the socket
 		wg.Add(1)
@@ -122,7 +111,29 @@ func RunServer() {
 			fmt.Println("Connection closed")
 		}
 	}
+}
 
-	wg.Wait()
+// main for server (to be called from runServer)
+func RunServer() {
+	wgMain := sync.WaitGroup{}
+	// rooms := []room{defaultRoom} // TODO: need for later! -> make concurrent
+
+	// set up listener on port
+	ln, err := net.Listen(PROTOCOL, PORT)
+	defer ln.Close()
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println("Connected to port: " + PORT + " via: " + PROTOCOL)
+
+	wgMain.Add(1)
+	go func() {
+		defer wgMain.Done()
+		newCall(ln)
+	}()
+
+	wgMain.Wait()
 	fmt.Println("closing server...")
 }
