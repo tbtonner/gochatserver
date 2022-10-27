@@ -16,6 +16,7 @@ type client struct {
 	currentRoom *room
 }
 
+// constructor for client struct
 func newClient(
 	uid string, reader io.Reader, writer io.Writer, username string, msgChan chan string, currentRoom *room,
 ) *client {
@@ -39,6 +40,19 @@ func (cli *client) getUsername() (string, error) {
 	return username, nil
 }
 
+// func to send msg to everone in room except the client who sent it
+func (cli *client) sendToAllBarMe(msg string) {
+	for _, client := range cli.currentRoom.clients {
+		if cli != client {
+			err := writeToCon(client.writer, msg)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+		}
+	}
+}
+
 // goroutine to monitor the msgChan channel and send to clients
 func (cli *client) monitorMsgChan() {
 	for {
@@ -48,16 +62,7 @@ func (cli *client) monitorMsgChan() {
 			return
 		}
 
-		// send msg to everone in room except the client who sent it
-		for _, client := range cli.currentRoom.clients {
-			if cli != client {
-				err := writeToCon(client.writer, msg)
-				if err != nil {
-					fmt.Println(err)
-					return
-				}
-			}
-		}
+		cli.sendToAllBarMe(msg)
 	}
 }
 

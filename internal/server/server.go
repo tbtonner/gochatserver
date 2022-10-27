@@ -70,6 +70,7 @@ func RunServer() {
 			defer wg.Done()
 			defer con.Close()
 			newClient.newClientSetup(&rooms)
+			newClient.sendToAllBarMe(fmt.Sprintf("%q has left the chat", newClient.username))
 			fmt.Printf("closing connection: %q\n", newClient.uid)
 		}()
 	}
