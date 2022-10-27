@@ -1,5 +1,7 @@
 package server
 
+import "fmt"
+
 type room struct {
 	name    string
 	clients []*client
@@ -15,12 +17,12 @@ func newDefaultRoom() *room {
 
 func (r *room) addCliToRoom(cli *client) {
 	r.clients = append(r.clients, cli)
+	fmt.Println(r.clients)
 }
 
-func (r *room) removeCli(cli client) {
-	for i, clients := range r.clients {
-		if clients.uid == cli.uid {
-
+func (r *room) removeCli(cli *client) {
+	for i, client := range r.clients {
+		if client.uid == cli.uid {
 			r.clients = append(r.clients[:i], r.clients[i+1:]...)
 		}
 	}

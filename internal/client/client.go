@@ -23,10 +23,10 @@ func printMsg(msg string) {
 // goroutine to read from port
 func monitorSocket(con net.Conn) {
 	for {
-		msg, err := bufio.NewReader(con).ReadString('\n')
+		msg, err := bufio.NewReader(con).ReadString('\000')
 		if err != nil {
 			fmt.Println("Unable to read input from the server:", err.Error())
-			os.Exit(1)
+			os.Exit(0)
 		}
 		printMsg(msg)
 	}

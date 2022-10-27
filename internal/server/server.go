@@ -20,7 +20,7 @@ func FormatStringInput(s string) string {
 
 // func to send a given msg to a client
 func writeToCon(writer io.Writer, msg string) error {
-	_, err := writer.Write([]byte(msg + "\n"))
+	_, err := writer.Write([]byte(msg + "\000"))
 	return err
 }
 
@@ -31,7 +31,7 @@ func RunServer() {
 
 	defaultRoom := newDefaultRoom()
 	rooms := rooms{}
-	rooms.addRoom(*defaultRoom)
+	rooms.addRoom(defaultRoom)
 
 	// set up listener on port
 	ln, err := net.Listen(PROTOCOL, PORT)
@@ -59,6 +59,7 @@ func RunServer() {
 			con,
 			"annoymous",
 			make(chan string, 1),
+			make(chan string, 1),
 			defaultRoom,
 		)
 		defaultRoom.addCliToRoom(newClient)
@@ -70,6 +71,7 @@ func RunServer() {
 			defer wg.Done()
 			defer con.Close()
 			newClient.newClientSetup(&rooms)
+			// connection been terminated at this point:
 			newClient.sendToAllBarMe(fmt.Sprintf("%q has left the chat", newClient.username))
 			fmt.Printf("closing connection: %q\n", newClient.uid)
 		}()

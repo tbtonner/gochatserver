@@ -3,18 +3,18 @@ package server
 import "sync"
 
 type rooms struct {
-	rms []room
+	rms []*room
 	mu  sync.Mutex
 }
 
-func (rooms *rooms) addRoom(room room) {
+func (rooms *rooms) addRoom(room *room) {
 	rooms.mu.Lock()
 	defer rooms.mu.Unlock()
 
 	rooms.rms = append(rooms.rms, room)
 }
 
-func (rooms *rooms) removeRoom(room room) {
+func (rooms *rooms) removeRoom(room *room) {
 	rooms.mu.Lock()
 	defer rooms.mu.Unlock()
 
