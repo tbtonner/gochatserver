@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/tbtonner/gochatserver/internal"
+	"github.com/tbtonner/gochatserver/internal/client"
 )
 
 func main() {
-	internal.RunClient()
+	client.RunClient()
 }
