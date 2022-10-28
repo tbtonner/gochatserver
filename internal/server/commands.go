@@ -102,8 +102,8 @@ func (cli *client) comHelp() {
 '/create' <room_name>: creates a new room with a given room_name if possible and joins it
 '/join' <room_name>: joins room with given room_name if possible
 '/shout' <msg>: capitalises msg and sends to current room
-'/whisper' <person> <msg>: sends msg only to person given
-'/kick' <person>: kicks person from room
+NOT HERE: '/whisper' <person> <msg>: sends msg only to person given
+NOT HERE: '/kick' <person>: kicks person from room
 '/spam' <times> <msg>: spams a msg a number of times specified in current room
 `))
 }
