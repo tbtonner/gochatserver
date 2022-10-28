@@ -26,6 +26,7 @@ func newClient(
 		currentRoom: currentRoom}
 }
 
+// TODO: func that sets the clients username
 func (cli *client) setUsername(username string) {
 	cli.username = username
 }
@@ -77,22 +78,46 @@ func (cli *client) monitorComChan(rooms *rooms) {
 			return
 		}
 
-		splitList := strings.Split(com, " ")
+		splitList := strings.Split(FormatStringInput(com), " ")
 		switch splitList[0] {
 		case "create":
-			cli.comCreate(splitList[1:], rooms)
+			if len(splitList[1:]) > 0 {
+				cli.comCreate(splitList[1:], rooms)
+			} else {
+				writeToCon(cli.writer, fmt.Sprintf("Please provide a room name argument"))
+			}
 		case "join":
-			cli.comJoin(splitList[1:], rooms)
+			if len(splitList[1:]) > 0 {
+				cli.comJoin(splitList[1:], rooms)
+			} else {
+				writeToCon(cli.writer, fmt.Sprintf("Please specify what room you would like to join"))
+			}
 		case "shout":
-			cli.comShout(splitList[1:])
+			if len(splitList[1:]) > 0 {
+				cli.comShout(splitList[1:])
+			} else {
+				writeToCon(cli.writer, fmt.Sprintf("Please provide a message to shout"))
+			}
 		case "whisper":
-			cli.comWhisper(splitList[1:])
+			if len(splitList[1:]) > 1 {
+				cli.comWhisper(splitList[1:])
+			} else {
+				writeToCon(cli.writer, fmt.Sprintf("Please provide both a username and a message to send whisper"))
+			}
 		case "help":
 			cli.comHelp()
 		case "kick":
-			cli.comKick(splitList[1:])
+			if len(splitList[1:]) > 0 {
+				cli.comKick(splitList[1:])
+			} else {
+				writeToCon(cli.writer, fmt.Sprintf("Please prodive a username to kick"))
+			}
 		case "spam":
-			cli.comSpam(splitList[1:])
+			if len(splitList[1:]) > 1 {
+				cli.comSpam(splitList[1:])
+			} else {
+				writeToCon(cli.writer, fmt.Sprintf("Please provide both a message and a number of times to spam"))
+			}
 		default:
 			cli.comNoneFound(splitList[0])
 		}
@@ -116,11 +141,13 @@ func (cli *client) handleCon() {
 		if data[0:1] == "/" {
 			cli.comChan <- FormatStringInput(data[1:])
 		} else {
-			cli.msgChan <- cli.username + ": " + data
+			cli.msgChan <- cli.username + ": " + FormatStringInput(data)
 		}
 	}
 }
 
+// goroutine that set's all the other go routines up for a new client that joined
+// gets username first then starts the subroutines
 func (cli *client) newClientSetup(rooms *rooms) {
 	wg := sync.WaitGroup{}
 	defer wg.Wait()

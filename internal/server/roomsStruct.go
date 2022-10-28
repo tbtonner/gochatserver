@@ -7,6 +7,7 @@ type rooms struct {
 	mu  sync.Mutex
 }
 
+// method that adds a new room to the rooms struct 
 func (rooms *rooms) addRoom(room *room) {
 	rooms.mu.Lock()
 	defer rooms.mu.Unlock()
@@ -14,6 +15,7 @@ func (rooms *rooms) addRoom(room *room) {
 	rooms.rms = append(rooms.rms, room)
 }
 
+// method that removes a room from the rooms struct
 func (rooms *rooms) removeRoom(room *room) {
 	rooms.mu.Lock()
 	defer rooms.mu.Unlock()

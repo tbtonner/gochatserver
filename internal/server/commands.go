@@ -2,9 +2,22 @@ package server
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
+// func to see if room name provided already exists
+func roomExist(rname string, rooms *rooms) bool {
+	for _, room := range rooms.rms {
+		if room.name == rname {
+			return true
+		}
+	}
+
+	return false
+}
+
+// function to join a client to a new room (leave old one and update 'rooms' to match new state)
 func (cli *client) joinNewRoom(newRoom *room) {
 	cli.currentRoom.removeCli(cli)
 	cli.currentRoom = newRoom
@@ -18,16 +31,22 @@ func (cli *client) joinNewRoom(newRoom *room) {
 	cli.msgChan <- cli.username + " has entered the chat"
 }
 
+// command to create a new room
 func (cli *client) comCreate(args []string, rooms *rooms) {
 	fmt.Printf("create room command: %v\n", args)
-	newRoom := newRoom(args[0])
-	rooms.addRoom(newRoom)
 
-	cli.joinNewRoom(newRoom)
+	if args[0] != "" && !roomExist(args[0], rooms) {
+		newRoom := newRoom(args[0])
+		rooms.addRoom(newRoom)
 
-	writeToCon(cli.writer, fmt.Sprintf(""))
+		cli.joinNewRoom(newRoom)
+		writeToCon(cli.writer, fmt.Sprintf("Room created successfully"))
+	} else {
+		writeToCon(cli.writer, fmt.Sprintf("Room name invalid or already taken"))
+	}
 }
 
+// command to join a new room
 func (cli *client) comJoin(args []string, rooms *rooms) {
 	fmt.Printf("join room command: %v\n", args)
 	for _, room := range rooms.rms {
@@ -40,27 +59,43 @@ func (cli *client) comJoin(args []string, rooms *rooms) {
 	writeToCon(cli.writer, fmt.Sprintf("Room: %q does not exist", args[0]))
 }
 
+// command to shout a given message (CAPS)
 func (cli *client) comShout(args []string) {
 	fmt.Printf("shout command: %v\n", args)
 	msg := strings.ToUpper(strings.Join(args, " "))
 	cli.msgChan <- cli.username + ": " + msg
 }
 
+// TODO: command to whisper a message to a specific user
 func (cli *client) comWhisper(args []string) {
 	fmt.Printf("whisper command: %v\n", args)
-	writeToCon(cli.writer, fmt.Sprintf(""))
+	writeToCon(cli.writer, fmt.Sprintf("This feature is yet to be implimented :("))
 }
 
+// TODO: command to kick a user from the current room
 func (cli *client) comKick(args []string) {
 	fmt.Printf("kick command: %v\n", args)
-	writeToCon(cli.writer, fmt.Sprintf(""))
+	writeToCon(cli.writer, fmt.Sprintf("This feature is yet to be implimented :("))
 }
 
+// command to spam a message x times
 func (cli *client) comSpam(args []string) {
 	fmt.Printf("spam command: %v\n", args)
-	writeToCon(cli.writer, fmt.Sprintf(""))
+
+	num, err := strconv.ParseInt(args[0], 10, 64)
+	if err != nil {
+		writeToCon(cli.writer, fmt.Sprintf("%q is not a number", args[0]))
+		return
+	}
+
+	spamMsg := ""
+	for i := 0; i < int(num); i++ {
+		spamMsg += fmt.Sprintf("%s: %s\n", cli.username, args[1])
+	}
+	cli.msgChan <- strings.TrimSuffix(spamMsg, "\n")
 }
 
+// the help command - lists all the commands to user's screen
 func (cli *client) comHelp() {
 	fmt.Printf("help command\n")
 	writeToCon(cli.writer, fmt.Sprintf(`
@@ -73,6 +108,7 @@ func (cli *client) comHelp() {
 `))
 }
 
+// func to print to user when user enters a command not found
 func (cli *client) comNoneFound(com string) {
 	fmt.Printf("Command %q not found\n", com)
 	writeToCon(cli.writer, fmt.Sprintf("Command %q not found", com))

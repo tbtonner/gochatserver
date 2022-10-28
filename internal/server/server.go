@@ -52,7 +52,7 @@ func RunServer() {
 			break
 		}
 
-		// create new client instance and add to the clients slice (set to default room)
+		// create new client instance and add to the clients slice
 		newClient := newClient(
 			con.RemoteAddr().String(),
 			con,
